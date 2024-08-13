@@ -23,10 +23,10 @@ services:
   3x-ui:
     image: ghcr.io/mhsanaei/3x-ui:latest
     container_name: 3x-ui
-    hostname: 85.92.108.236
+    hostname: ${WG_HOST}
     volumes:
-      - /3x-ui/db/:/etc/x-ui/
-      - /3x-ui/cert/:/root/cert/
+      - /3x-ui-db/:/etc/x-ui/
+      - /3x-ui-cert/:/root/cert/
     environment:
       XRAY_VMESS_AEAD_FORCED: "false"
     tty: true
@@ -35,4 +35,5 @@ services:
 
 volumes:
   wg-easy:
-  3x-ui:
+  3x-ui-db:
+  3x-ui-cert:
