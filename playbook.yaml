@@ -1,0 +1,100 @@
+---
+- name: Установка WG и 3x-ui на VDS
+  hosts: vds
+
+  tasks:
+    - name: Установка необходимых пакетов
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - gnupg-agent
+        - software-properties-common
+
+    - name: Добавление Docker GPG ключа
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Добавление Docker репозитория
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
+        state: present
+
+    - name: Установка Docker
+      apt:
+        name: docker-ce
+        state: latest
+      notify:
+        - Start Docker
+
+    - name: Получение последней версии Docker Compose
+      uri:
+        url: https://api.github.com/repos/docker/compose/releases/latest
+        return_content: yes
+      register: compose_release_info
+
+    - name: Извлечение номера версии
+      set_fact:
+        latest_version: "{{ compose_release_info.json.tag_name }}"
+
+    - name: Получение системного типа (uname -s)
+      command: uname -s
+      register: uname_s
+
+    - name: Получение архитектуры системы (uname -m)
+      command: uname -m
+      register: uname_m
+
+    - debug:
+        msg: "Последняя версия Docker Compose: {{ latest_version }}, система: {{ uname_s.stdout }}, архитектура: {{ uname_m.stdout }}"
+
+    - name: Установка Docker Compose
+      get_url:
+        url: "https://github.com/docker/compose/releases/download/{{ latest_version }}/docker-compose-{{ uname_s.stdout }}-{{ uname_m.stdout }}"
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+
+    - name: Проверка версии Docker Compose
+      command: /usr/local/bin/docker-compose --version
+      register: compose_version_output
+
+    - name: Создание директории /root/proxy
+      file:
+        path: /root/proxy
+        state: directory
+        mode: '0755'
+
+    - name: Копирование файла compose.yml
+      copy:
+        src: compose.yml
+        dest: /root/proxy/compose.yml
+        mode: '0644'
+
+    - name: Генерация случайного пароля
+      set_fact:
+        wg_password: "{{ lookup('password', '/dev/null length=16 chars=ascii_letters,digits') }}"
+
+    - debug:
+        msg: "Пароль: {{ wg_password }}"
+
+    - name: Создание .env файла с паролем
+      copy:
+        content: "WG_HOST={{ ansible_ssh_host }}\nWG_PASSWORD={{ wg_password }}\nWG_PORT=51820\nWG_WEB_PORT=51821"
+        dest: /root/proxy/.env
+        mode: '0600'
+
+    - name: Запуск Docker Compose
+      command: docker-compose up -d
+      args:
+        chdir: /root/proxy
+
+  handlers:
+    - name: Start Docker
+      service:
+        name: docker
+        state: started
+        enabled: true

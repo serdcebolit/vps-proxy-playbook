@@ -1,0 +1,5 @@
+inventory.ini
+/.idea
+id_rsa
+id_rsa.pub
+test-playbook.yaml
