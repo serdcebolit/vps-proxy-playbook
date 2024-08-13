@@ -1,0 +1,17 @@
+---
+- name: Обновление контейнеров WG и 3x-ui
+  hosts: vds
+
+  tasks:
+    - name: Обновление контейнеров
+      command: docker-compose pull
+      args:
+        chdir: /root/proxy
+    - name: Остановка Docker Compose
+      command: docker-compose down
+      args:
+        chdir: /root/proxy
+    - name: Запуск Docker Compose
+      command: docker-compose up -d
+      args:
+        chdir: /root/proxy
