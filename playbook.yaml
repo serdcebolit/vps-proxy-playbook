@@ -74,6 +74,9 @@
         dest: /root/proxy/compose.yml
         mode: '0644'
 
+    - name: Отключение ufw
+      command: ufw disable
+
     - name: Генерация случайного пароля
       set_fact:
         wg_password: "{{ lookup('password', '/dev/null length=16 chars=ascii_letters,digits') }}"
